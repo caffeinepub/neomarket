@@ -7,8 +7,18 @@ export interface None {
     __kind__: "None";
 }
 export type Option<T> = Some<T> | None;
-export interface UserProfile {
-    name: string;
+export interface QuestionAnswerPair {
+    question: string;
+    answer: string;
+}
+export interface CheatSheet {
+    title: string;
+    content: Array<QuestionAnswerPair>;
+    createdAt: bigint;
+}
+export interface CheatSheetInput {
+    title: string;
+    content: Array<QuestionAnswerPair>;
 }
 export enum UserRole {
     admin = "admin",
@@ -16,16 +26,11 @@ export enum UserRole {
     guest = "guest"
 }
 export interface backendInterface {
-    addToWatchlist(symbol: string): Promise<void>;
+    addSheet(sheet: CheatSheetInput): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
-    getCallerUserProfile(): Promise<UserProfile | null>;
+    deleteSheet(title: string): Promise<void>;
+    getAllSheets(): Promise<Array<CheatSheet>>;
     getCallerUserRole(): Promise<UserRole>;
-    getPreferredCurrency(): Promise<string | null>;
-    getUserProfile(user: Principal): Promise<UserProfile | null>;
-    getWatchlist(): Promise<Array<string>>;
-    getWatchlistByUser(user: Principal): Promise<Array<string>>;
+    getSheetsForUser(user: Principal): Promise<Array<CheatSheet>>;
     isCallerAdmin(): Promise<boolean>;
-    removeFromWatchlist(symbol: string): Promise<void>;
-    saveCallerUserProfile(profile: UserProfile): Promise<void>;
-    setPreferredCurrency(currency: string): Promise<void>;
 }

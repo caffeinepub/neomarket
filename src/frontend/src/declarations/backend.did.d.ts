@@ -10,24 +10,28 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
-export interface UserProfile { 'name' : string }
+export interface CheatSheet {
+  'title' : string,
+  'content' : Array<QuestionAnswerPair>,
+  'createdAt' : bigint,
+}
+export interface CheatSheetInput {
+  'title' : string,
+  'content' : Array<QuestionAnswerPair>,
+}
+export interface QuestionAnswerPair { 'question' : string, 'answer' : string }
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
 export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
-  'addToWatchlist' : ActorMethod<[string], undefined>,
+  'addSheet' : ActorMethod<[CheatSheetInput], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
-  'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
+  'deleteSheet' : ActorMethod<[string], undefined>,
+  'getAllSheets' : ActorMethod<[], Array<CheatSheet>>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
-  'getPreferredCurrency' : ActorMethod<[], [] | [string]>,
-  'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
-  'getWatchlist' : ActorMethod<[], Array<string>>,
-  'getWatchlistByUser' : ActorMethod<[Principal], Array<string>>,
+  'getSheetsForUser' : ActorMethod<[Principal], Array<CheatSheet>>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
-  'removeFromWatchlist' : ActorMethod<[string], undefined>,
-  'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
-  'setPreferredCurrency' : ActorMethod<[string], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

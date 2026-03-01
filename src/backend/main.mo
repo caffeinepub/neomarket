@@ -2,120 +2,102 @@ import Map "mo:core/Map";
 import List "mo:core/List";
 import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
-import Migration "migration";
+import Time "mo:core/Time";
+import Iter "mo:core/Iter";
+
 import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
 
-(with migration = Migration.run)
+
+
 actor {
   // Initialize the access control system
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
 
-  let userWatchlists = Map.empty<Principal, List.List<Text>>();
-  let userCurrencies = Map.empty<Principal, Text>();
-
-  // User Profile Type
-  public type UserProfile = {
-    name : Text;
+  type QuestionAnswerPair = {
+    question : Text;
+    answer : Text;
   };
 
-  let userProfiles = Map.empty<Principal, UserProfile>();
-
-  // User Profile Management Functions
-  public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can access profiles");
-    };
-    userProfiles.get(caller);
+  type CheatSheet = {
+    title : Text;
+    content : [QuestionAnswerPair];
+    createdAt : Int;
   };
 
-  public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
+  public type CheatSheetInput = {
+    title : Text;
+    content : [QuestionAnswerPair];
+  };
+
+  // Map from Principal to a list of CheatSheets
+  let userSheets = Map.empty<Principal, List.List<CheatSheet>>();
+  public query ({ caller }) func getSheetsForUser(user : Principal) : async [CheatSheet] {
     if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Can only view your own profile");
+      Runtime.trap("NotAuthorized");
     };
-    userProfiles.get(user);
-  };
-
-  public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
-    };
-    userProfiles.add(caller, profile);
-  };
-
-  // Watchlist Management Functions
-  public shared ({ caller }) func addToWatchlist(symbol : Text) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can modify watchlist");
-    };
-    updateWatchlist(caller, func(currentList) { currentList.add(symbol) });
-  };
-
-  public shared ({ caller }) func removeFromWatchlist(symbol : Text) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can modify watchlist");
-    };
-    updateWatchlist(
-      caller,
-      func(currentList) {
-        let filtered = currentList.filter(
-          func(item) { item != symbol }
-        );
-        currentList.clear();
-        let copied = List.fromArray(filtered.toArray());
-        currentList.addAll(copied.values());
-      },
-    );
-  };
-
-  public query ({ caller }) func getWatchlist() : async [Text] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can access watchlist");
-    };
-    getWatchlistByUserSync(caller);
-  };
-
-  public query ({ caller }) func getWatchlistByUser(user : Principal) : async [Text] {
-    // Only allow viewing own watchlist or admin can view any
-    if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Can only view your own watchlist");
-    };
-    getWatchlistByUserSync(user);
-  };
-
-  func getWatchlistByUserSync(user : Principal) : [Text] {
-    switch (userWatchlists.get(user)) {
+    switch (userSheets.get(user)) {
+      case (?list) { list.toArray() };
       case (null) { [] };
-      case (?watchlist) { watchlist.toArray() };
     };
   };
 
-  // Currency Preference Functions
-  public shared ({ caller }) func setPreferredCurrency(currency : Text) : async () {
+  public shared ({ caller }) func addSheet(sheet : CheatSheetInput) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can set preferred currency");
+      Runtime.trap("InvalidUser");
     };
-    userCurrencies.add(caller, currency);
-  };
-
-  public query ({ caller }) func getPreferredCurrency() : async ?Text {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can access preferred currency");
+    let newSheet = {
+      title = sheet.title;
+      content = sheet.content;
+      createdAt = Time.now();
     };
-    userCurrencies.get(caller);
-  };
 
-  // Helper function
-  func updateWatchlist(user : Principal, updateFn : (List.List<Text>) -> ()) {
-    switch (userWatchlists.get(user)) {
+    let sheets = switch (userSheets.get(caller)) {
+      case (?list) { list.add(newSheet); list };
       case (null) {
-        let newList = List.empty<Text>();
-        updateFn(newList);
-        userWatchlists.add(user, newList);
+        let list = List.empty<CheatSheet>();
+        list.add(newSheet);
+        list;
       };
-      case (?currentList) { updateFn(currentList) };
     };
+    userSheets.add(caller, sheets);
+  };
+
+  public shared ({ caller }) func deleteSheet(title : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("InvalidUser");
+    };
+
+    switch (userSheets.get(caller)) {
+      case (?list) {
+        let filtered = list.filter(
+          func(sheet) { sheet.title != title }
+        );
+        list.clear();
+        let copied = List.fromArray<CheatSheet>(filtered.toArray());
+        list.addAll(copied.values());
+        userSheets.add(caller, list);
+      };
+      case (null) { Runtime.trap("NotFound") };
+    };
+  };
+
+  public query ({ caller }) func getAllSheets() : async [CheatSheet] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view all sheets");
+    };
+
+    let allSheets = List.empty<CheatSheet>();
+    let iter = userSheets.values();
+    iter.forEach(
+      func(list) {
+        if (not list.isEmpty()) {
+          allSheets.addAll(list.values());
+        };
+      }
+    );
+    allSheets.toArray();
   };
 };
 

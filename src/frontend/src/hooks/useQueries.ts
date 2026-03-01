@@ -1,72 +1,49 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { CheatSheet, CheatSheetInput } from "../backend.d";
 import { useActor } from "./useActor";
 
-// ─── Watchlist ────────────────────────────────────────────────────────────────
+// ─── Get All Sheets ───────────────────────────────────────────────────────────
 
-export function useGetWatchlist() {
+export function useGetAllSheets() {
   const { actor, isFetching } = useActor();
-  return useQuery<string[]>({
-    queryKey: ["watchlist"],
+  return useQuery<CheatSheet[]>({
+    queryKey: ["sheets"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getWatchlist();
+      return actor.getAllSheets();
     },
     enabled: !!actor && !isFetching,
   });
 }
 
-export function useAddToWatchlist() {
+// ─── Add Sheet ────────────────────────────────────────────────────────────────
+
+export function useAddSheet() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (symbol: string) => {
-      if (!actor) return;
-      return actor.addToWatchlist(symbol);
+    mutationFn: async (sheet: CheatSheetInput) => {
+      if (!actor) throw new Error("Actor not ready");
+      return actor.addSheet(sheet);
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["watchlist"] });
+      void queryClient.invalidateQueries({ queryKey: ["sheets"] });
     },
   });
 }
 
-export function useRemoveFromWatchlist() {
+// ─── Delete Sheet ─────────────────────────────────────────────────────────────
+
+export function useDeleteSheet() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (symbol: string) => {
-      if (!actor) return;
-      return actor.removeFromWatchlist(symbol);
+    mutationFn: async (title: string) => {
+      if (!actor) throw new Error("Actor not ready");
+      return actor.deleteSheet(title);
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["watchlist"] });
-    },
-  });
-}
-
-// ─── Preferred Currency ───────────────────────────────────────────────────────
-
-export function useGetPreferredCurrency() {
-  const { actor, isFetching } = useActor();
-  return useQuery<string | null>({
-    queryKey: ["preferredCurrency"],
-    queryFn: async () => {
-      if (!actor) return null;
-      return actor.getPreferredCurrency();
-    },
-    enabled: !!actor && !isFetching,
-  });
-}
-
-export function useSetPreferredCurrency() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (currency: string) => {
-      if (!actor) return;
-      return actor.setPreferredCurrency(currency);
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["preferredCurrency"] });
+      void queryClient.invalidateQueries({ queryKey: ["sheets"] });
     },
   });
 }

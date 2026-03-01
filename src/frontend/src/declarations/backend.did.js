@@ -8,69 +8,75 @@
 
 import { IDL } from '@icp-sdk/core/candid';
 
+export const QuestionAnswerPair = IDL.Record({
+  'question' : IDL.Text,
+  'answer' : IDL.Text,
+});
+export const CheatSheetInput = IDL.Record({
+  'title' : IDL.Text,
+  'content' : IDL.Vec(QuestionAnswerPair),
+});
 export const UserRole = IDL.Variant({
   'admin' : IDL.Null,
   'user' : IDL.Null,
   'guest' : IDL.Null,
 });
-export const UserProfile = IDL.Record({ 'name' : IDL.Text });
+export const CheatSheet = IDL.Record({
+  'title' : IDL.Text,
+  'content' : IDL.Vec(QuestionAnswerPair),
+  'createdAt' : IDL.Int,
+});
 
 export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
-  'addToWatchlist' : IDL.Func([IDL.Text], [], []),
+  'addSheet' : IDL.Func([CheatSheetInput], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-  'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+  'deleteSheet' : IDL.Func([IDL.Text], [], []),
+  'getAllSheets' : IDL.Func([], [IDL.Vec(CheatSheet)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
-  'getPreferredCurrency' : IDL.Func([], [IDL.Opt(IDL.Text)], ['query']),
-  'getUserProfile' : IDL.Func(
+  'getSheetsForUser' : IDL.Func(
       [IDL.Principal],
-      [IDL.Opt(UserProfile)],
-      ['query'],
-    ),
-  'getWatchlist' : IDL.Func([], [IDL.Vec(IDL.Text)], ['query']),
-  'getWatchlistByUser' : IDL.Func(
-      [IDL.Principal],
-      [IDL.Vec(IDL.Text)],
+      [IDL.Vec(CheatSheet)],
       ['query'],
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-  'removeFromWatchlist' : IDL.Func([IDL.Text], [], []),
-  'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
-  'setPreferredCurrency' : IDL.Func([IDL.Text], [], []),
 });
 
 export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
+  const QuestionAnswerPair = IDL.Record({
+    'question' : IDL.Text,
+    'answer' : IDL.Text,
+  });
+  const CheatSheetInput = IDL.Record({
+    'title' : IDL.Text,
+    'content' : IDL.Vec(QuestionAnswerPair),
+  });
   const UserRole = IDL.Variant({
     'admin' : IDL.Null,
     'user' : IDL.Null,
     'guest' : IDL.Null,
   });
-  const UserProfile = IDL.Record({ 'name' : IDL.Text });
+  const CheatSheet = IDL.Record({
+    'title' : IDL.Text,
+    'content' : IDL.Vec(QuestionAnswerPair),
+    'createdAt' : IDL.Int,
+  });
   
   return IDL.Service({
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
-    'addToWatchlist' : IDL.Func([IDL.Text], [], []),
+    'addSheet' : IDL.Func([CheatSheetInput], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-    'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+    'deleteSheet' : IDL.Func([IDL.Text], [], []),
+    'getAllSheets' : IDL.Func([], [IDL.Vec(CheatSheet)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
-    'getPreferredCurrency' : IDL.Func([], [IDL.Opt(IDL.Text)], ['query']),
-    'getUserProfile' : IDL.Func(
+    'getSheetsForUser' : IDL.Func(
         [IDL.Principal],
-        [IDL.Opt(UserProfile)],
-        ['query'],
-      ),
-    'getWatchlist' : IDL.Func([], [IDL.Vec(IDL.Text)], ['query']),
-    'getWatchlistByUser' : IDL.Func(
-        [IDL.Principal],
-        [IDL.Vec(IDL.Text)],
+        [IDL.Vec(CheatSheet)],
         ['query'],
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-    'removeFromWatchlist' : IDL.Func([IDL.Text], [], []),
-    'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
-    'setPreferredCurrency' : IDL.Func([IDL.Text], [], []),
   });
 };
 
