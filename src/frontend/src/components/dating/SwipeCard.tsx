@@ -1,5 +1,5 @@
 import type { MockUser } from "@/data/mockUsers";
-import { CheckCircle, Heart, MapPin, Zap } from "lucide-react";
+import { CheckCircle, Clock, Heart, MapPin, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { CompatibilityMeter } from "./CompatibilityMeter";
 
@@ -8,9 +8,16 @@ interface Props {
   compatScore: number;
   onSwipe: (direction: "like" | "pass") => void;
   stackIndex: number;
+  lastActiveStr?: string;
 }
 
-export function SwipeCard({ user, compatScore, onSwipe, stackIndex }: Props) {
+export function SwipeCard({
+  user,
+  compatScore,
+  onSwipe,
+  stackIndex,
+  lastActiveStr,
+}: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
   const startX = useRef(0);
   const startY = useRef(0);
@@ -18,12 +25,15 @@ export function SwipeCard({ user, compatScore, onSwipe, stackIndex }: Props) {
   const isDragging = useRef(false);
   const [dragX, setDragX] = useState(0);
   const [isFlyingOff, setIsFlyingOff] = useState<"like" | "pass" | null>(null);
+  const [isHovered, setIsHovered] = useState(false);
 
   const THRESHOLD = 100;
   const MAX_ROTATE = 18;
   const rotation = (dragX / 300) * MAX_ROTATE;
   const likeOpacity = Math.max(0, Math.min(1, dragX / THRESHOLD));
   const nopeOpacity = Math.max(0, Math.min(1, -dragX / THRESHOLD));
+
+  const isOnline = lastActiveStr === "Online";
 
   function startDrag(clientX: number, clientY: number) {
     isDragging.current = true;
@@ -114,6 +124,13 @@ export function SwipeCard({ user, compatScore, onSwipe, stackIndex }: Props) {
     creative: "#ffd60a",
   };
 
+  const hoverGlow =
+    isHovered && stackIndex === 0
+      ? "0 20px 60px rgba(0,0,0,0.7), 0 0 30px rgba(255,45,120,0.35), 0 0 50px rgba(155,93,229,0.2)"
+      : stackIndex === 0
+        ? "0 20px 60px rgba(0,0,0,0.7), 0 0 30px rgba(255,45,120,0.1)"
+        : "0 10px 30px rgba(0,0,0,0.5)";
+
   return (
     <div
       ref={cardRef}
@@ -123,14 +140,13 @@ export function SwipeCard({ user, compatScore, onSwipe, stackIndex }: Props) {
         transform,
         transition: isDragging.current
           ? "none"
-          : "transform 0.35s cubic-bezier(0.16,1,0.3,1)",
+          : "transform 0.35s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s ease",
         pointerEvents: stackIndex === 0 ? "auto" : "none",
-        boxShadow:
-          stackIndex === 0
-            ? "0 20px 60px rgba(0,0,0,0.7), 0 0 30px rgba(255,45,120,0.1)"
-            : "0 10px 30px rgba(0,0,0,0.5)",
+        boxShadow: hoverGlow,
       }}
       onMouseDown={onMouseDown}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -210,8 +226,8 @@ export function SwipeCard({ user, compatScore, onSwipe, stackIndex }: Props) {
           </div>
         </div>
 
-        {/* Online badge */}
-        {user.isOnline && (
+        {/* Online / Last active badge */}
+        {lastActiveStr && (
           <div
             className="absolute top-4 left-4 flex items-center gap-1.5 px-2 py-1 rounded-full"
             style={{
@@ -219,9 +235,19 @@ export function SwipeCard({ user, compatScore, onSwipe, stackIndex }: Props) {
               backdropFilter: "blur(8px)",
             }}
           >
-            <span className="online-dot" style={{ width: 7, height: 7 }} />
-            <span style={{ color: "#00f5d4", fontSize: 10, fontWeight: 700 }}>
-              ONLINE
+            {isOnline ? (
+              <span className="online-dot" style={{ width: 7, height: 7 }} />
+            ) : (
+              <Clock size={9} style={{ color: "rgba(240,230,255,0.5)" }} />
+            )}
+            <span
+              style={{
+                color: isOnline ? "#00f5d4" : "rgba(240,230,255,0.55)",
+                fontSize: 10,
+                fontWeight: 700,
+              }}
+            >
+              {lastActiveStr.toUpperCase()}
             </span>
           </div>
         )}

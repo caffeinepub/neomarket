@@ -342,7 +342,6 @@ function convertPrice(usdPrice: number, currency: string): number {
 }
 
 // ─── Format large numbers (used for future dynamic market cap calculation) ────
-// biome-ignore lint/correctness/noUnusedVariables: utility for future real API integration
 function _formatMarketCap(usdValue: number, currency: string): string {
   const rate = BASE_FOREX_RATES[currency] ?? 1;
   const value = usdValue * rate;

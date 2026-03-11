@@ -1,11 +1,10 @@
 import { useApp } from "@/context/AppContext";
 import type { Story } from "@/context/AppContext";
-import { MOCK_USERS } from "@/data/mockUsers";
 import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 export function StoriesPage() {
-  const { stories, currentUser, markStorySeen, addStory } = useApp();
+  const { stories, currentUser, markStorySeen, addStory, users } = useApp();
   const [activeStory, setActiveStory] = useState<Story | null>(null);
   const [storyIndex, setStoryIndex] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -64,7 +63,7 @@ export function StoriesPage() {
 
   function getUserForStory(story: Story) {
     if (story.userId === currentUser?.id) return currentUser;
-    return MOCK_USERS.find((u) => u.id === story.userId);
+    return users.find((u) => u.id === story.userId);
   }
 
   return (
@@ -80,6 +79,30 @@ export function StoriesPage() {
           See what your matches are up to
         </p>
       </div>
+
+      {/* Empty state when not enough users */}
+      {stories.length === 0 && (
+        <div
+          className="flex flex-col items-center justify-center py-16 rounded-3xl mb-6"
+          style={{
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(255,45,120,0.1)",
+          }}
+        >
+          <p
+            className="text-base font-semibold mb-1"
+            style={{ color: "rgba(240,230,255,0.4)" }}
+          >
+            No stories yet
+          </p>
+          <p
+            className="text-sm text-center"
+            style={{ color: "rgba(240,230,255,0.25)" }}
+          >
+            Stories appear once more users join the app.
+          </p>
+        </div>
+      )}
 
       {/* Stories row */}
       <div

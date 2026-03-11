@@ -1,13 +1,16 @@
 import { CompatibilityMeter } from "@/components/dating/CompatibilityMeter";
 import { useApp } from "@/context/AppContext";
-import { CheckCircle, Heart, MapPin, MessageCircle } from "lucide-react";
+import { formatLastActive } from "@/context/AppContext";
+import type { RegisteredUser } from "@/data/mockUsers";
+import { CheckCircle, Clock, Heart, MapPin, MessageCircle } from "lucide-react";
 
 interface Props {
-  onChatWith: (userId: string) => void;
+  onChatWith: (matchId: string) => void;
 }
 
 export function MatchesPage({ onChatWith }: Props) {
-  const { matches, currentUser, getCompatibilityScore } = useApp();
+  const { matches, getMatchUser, currentUser, getCompatibilityScore } =
+    useApp();
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -20,7 +23,7 @@ export function MatchesPage({ onChatWith }: Props) {
           Your Matches
         </h2>
         <p style={{ color: "rgba(240,230,255,0.45)", fontSize: 14 }}>
-          {matches.length} people liked you back
+          {matches.length} mutual {matches.length === 1 ? "match" : "matches"}
         </p>
       </div>
 
@@ -46,19 +49,32 @@ export function MatchesPage({ onChatWith }: Props) {
             className="text-sm text-center max-w-xs"
             style={{ color: "rgba(240,230,255,0.3)" }}
           >
-            Start swiping on the Discover page to find your perfect match!
+            Start swiping on the Discover page. When someone swipes right on you
+            too — it's a match!
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {matches.map((user) => {
-            const score = currentUser
-              ? getCompatibilityScore(currentUser, user)
-              : 50;
+          {matches.map((match) => {
+            const user = getMatchUser(match.id);
+            if (!user) return null;
+            const regUser = user as RegisteredUser;
+            const score =
+              match.compatibilityScore ||
+              (currentUser ? getCompatibilityScore(currentUser, user) : 50);
+            const lastActiveStr = regUser.lastActive
+              ? formatLastActive(regUser.lastActive)
+              : undefined;
+            const isOnline = lastActiveStr === "Online";
+            const matchDate = new Date(match.matchedAt).toLocaleDateString([], {
+              month: "short",
+              day: "numeric",
+            });
+
             return (
               <div
-                key={user.id}
-                className="glass-panel glass-panel-hover p-4 flex flex-col gap-4 transition-all duration-300"
+                key={match.id}
+                className="glass-card glass-card-hover p-4 flex flex-col gap-4 transition-all duration-300 neon-hover"
                 style={{
                   cursor: "default",
                   boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
@@ -67,7 +83,7 @@ export function MatchesPage({ onChatWith }: Props) {
                   (e.currentTarget as HTMLElement).style.transform =
                     "translateY(-4px)";
                   (e.currentTarget as HTMLElement).style.boxShadow =
-                    "0 12px 40px rgba(255,45,120,0.15), 0 0 20px rgba(255,45,120,0.05)";
+                    "0 12px 40px rgba(255,45,120,0.18), 0 0 25px rgba(255,45,120,0.08)";
                 }}
                 onMouseLeave={(e) => {
                   (e.currentTarget as HTMLElement).style.transform =
@@ -88,7 +104,8 @@ export function MatchesPage({ onChatWith }: Props) {
                       background: "#1a0a1f",
                     }}
                   />
-                  {user.isOnline && (
+                  {/* Online/last active */}
+                  {lastActiveStr && (
                     <div
                       className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full"
                       style={{
@@ -96,18 +113,27 @@ export function MatchesPage({ onChatWith }: Props) {
                         backdropFilter: "blur(8px)",
                       }}
                     >
-                      <span
-                        className="online-dot"
-                        style={{ width: 6, height: 6 }}
-                      />
+                      {isOnline ? (
+                        <span
+                          className="online-dot"
+                          style={{ width: 6, height: 6 }}
+                        />
+                      ) : (
+                        <Clock
+                          size={9}
+                          style={{ color: "rgba(240,230,255,0.5)" }}
+                        />
+                      )}
                       <span
                         style={{
-                          color: "#00f5d4",
+                          color: isOnline
+                            ? "#00f5d4"
+                            : "rgba(240,230,255,0.55)",
                           fontSize: 9,
                           fontWeight: 700,
                         }}
                       >
-                        ONLINE
+                        {lastActiveStr.toUpperCase()}
                       </span>
                     </div>
                   )}
@@ -117,7 +143,7 @@ export function MatchesPage({ onChatWith }: Props) {
                     style={{
                       transform: "translateX(-50%)",
                       background: "linear-gradient(135deg, #ff2d78, #9b5de5)",
-                      boxShadow: "0 0 16px rgba(255,45,120,0.4)",
+                      boxShadow: "0 0 16px rgba(255,45,120,0.5)",
                     }}
                   >
                     <Heart size={10} fill="white" style={{ color: "white" }} />
@@ -142,7 +168,7 @@ export function MatchesPage({ onChatWith }: Props) {
                       <CheckCircle size={14} style={{ color: "#00f5d4" }} />
                     )}
                   </div>
-                  <div className="flex items-center gap-1 mb-3">
+                  <div className="flex items-center gap-1 mb-1">
                     <MapPin
                       size={11}
                       style={{ color: "rgba(240,230,255,0.4)" }}
@@ -153,6 +179,12 @@ export function MatchesPage({ onChatWith }: Props) {
                       {user.location}
                     </span>
                   </div>
+                  <p
+                    className="text-xs mb-3"
+                    style={{ color: "rgba(240,230,255,0.3)" }}
+                  >
+                    Matched on {matchDate}
+                  </p>
 
                   {/* Hobbies */}
                   <div className="flex gap-1.5 flex-wrap mb-3">
@@ -175,7 +207,7 @@ export function MatchesPage({ onChatWith }: Props) {
 
                   <button
                     type="button"
-                    onClick={() => onChatWith(user.id)}
+                    onClick={() => onChatWith(match.id)}
                     className="neon-btn-primary w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 mt-3"
                   >
                     <MessageCircle size={15} />

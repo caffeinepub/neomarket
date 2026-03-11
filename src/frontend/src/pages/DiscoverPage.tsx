@@ -1,6 +1,8 @@
+import { SearchFilterPanel } from "@/components/dating/SearchFilterPanel";
 import { SwipeCard } from "@/components/dating/SwipeCard";
 import { useApp } from "@/context/AppContext";
-import { Heart, Users, X } from "lucide-react";
+import { formatLastActive } from "@/context/AppContext";
+import { ChevronDown, Heart, Users, X } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 
 interface ConfettiPiece {
@@ -26,13 +28,28 @@ function createConfetti(): ConfettiPiece[] {
 }
 
 export function DiscoverPage() {
-  const { swipeQueue, currentUser, swipe, getCompatibilityScore, onlineCount } =
-    useApp();
-  const [matchUser, setMatchUser] = useState<string | null>(null);
+  const {
+    swipeQueue,
+    filteredUsers,
+    currentUser,
+    swipe,
+    getCompatibilityScore,
+    onlineCount,
+    searchFilters,
+    setSearchFilters,
+    loadMoreUsers,
+    currentPage,
+  } = useApp();
+  const [matchUser, setMatchUser] = useState<{
+    name: string;
+    score: number;
+  } | null>(null);
   const [confetti, setConfetti] = useState<ConfettiPiece[]>([]);
   const matchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const topUsers = swipeQueue.slice(0, 3);
+  const hasMoreUsers = filteredUsers.length > swipeQueue.length;
+  const PAGE_SIZE = 10;
 
   const handleSwipe = useCallback(
     (userId: string, direction: "like" | "pass") => {
@@ -40,23 +57,28 @@ export function DiscoverPage() {
       if (result === "match" && direction === "like") {
         const user = swipeQueue.find((u) => u.id === userId);
         if (user) {
-          setMatchUser(user.name);
+          const score = currentUser
+            ? getCompatibilityScore(currentUser, user)
+            : 50;
+          setMatchUser({ name: user.name, score });
           setConfetti(createConfetti());
           if (matchTimerRef.current) clearTimeout(matchTimerRef.current);
           matchTimerRef.current = setTimeout(() => {
             setMatchUser(null);
             setConfetti([]);
-          }, 3000);
+          }, 3500);
         }
       }
     },
-    [swipe, swipeQueue],
+    [swipe, swipeQueue, currentUser, getCompatibilityScore],
   );
+
+  const isFirstUser = filteredUsers.length === 0 && !searchFilters.nameSearch;
 
   return (
     <div className="flex flex-col items-center px-4 py-8">
       {/* Header */}
-      <div className="w-full max-w-sm mb-6 flex items-center justify-between">
+      <div className="w-full max-w-sm mb-4 flex items-center justify-between">
         <div>
           <h2
             className="text-2xl font-black font-display"
@@ -81,9 +103,43 @@ export function DiscoverPage() {
         </div>
       </div>
 
+      {/* Search & Filter panel */}
+      <div className="w-full max-w-sm mb-4">
+        <SearchFilterPanel
+          filters={searchFilters}
+          onChange={setSearchFilters}
+          onApply={() => {}}
+        />
+      </div>
+
       {/* Card deck */}
       <div className="relative" style={{ width: 360, height: 480 }}>
-        {topUsers.length === 0 ? (
+        {isFirstUser ? (
+          <div
+            className="flex flex-col items-center justify-center w-full h-full rounded-3xl"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,45,120,0.15)",
+            }}
+          >
+            <Heart
+              size={48}
+              style={{ color: "rgba(255,45,120,0.4)", marginBottom: 16 }}
+            />
+            <p
+              className="text-lg font-bold text-center px-6"
+              style={{ color: "rgba(240,230,255,0.6)" }}
+            >
+              You're the first one here!
+            </p>
+            <p
+              className="text-sm text-center mt-2 px-8"
+              style={{ color: "rgba(240,230,255,0.35)" }}
+            >
+              Share the app to find matches. More people join every day! 💕
+            </p>
+          </div>
+        ) : topUsers.length === 0 ? (
           <div
             className="flex flex-col items-center justify-center w-full h-full rounded-3xl"
             style={{
@@ -99,13 +155,21 @@ export function DiscoverPage() {
               className="text-lg font-bold text-center"
               style={{ color: "rgba(240,230,255,0.6)" }}
             >
-              You've seen everyone!
+              {searchFilters.nameSearch ||
+              searchFilters.locationFilter ||
+              searchFilters.hobbyFilter
+                ? "No results found"
+                : "You've seen everyone!"}
             </p>
             <p
               className="text-sm text-center mt-2"
               style={{ color: "rgba(240,230,255,0.35)" }}
             >
-              Check your matches and start chatting
+              {searchFilters.nameSearch ||
+              searchFilters.locationFilter ||
+              searchFilters.hobbyFilter
+                ? "Try different filters"
+                : "Check your matches and start chatting"}
             </p>
           </div>
         ) : (
@@ -117,6 +181,10 @@ export function DiscoverPage() {
               const score = currentUser
                 ? getCompatibilityScore(currentUser, user)
                 : 50;
+              const regUser = user as { lastActive?: number };
+              const lastActiveStr = regUser.lastActive
+                ? formatLastActive(regUser.lastActive)
+                : undefined;
               return (
                 <SwipeCard
                   key={user.id}
@@ -124,6 +192,7 @@ export function DiscoverPage() {
                   compatScore={score}
                   onSwipe={(dir) => handleSwipe(user.id, dir)}
                   stackIndex={stackIndex}
+                  lastActiveStr={lastActiveStr}
                 />
               );
             })
@@ -136,7 +205,7 @@ export function DiscoverPage() {
           <button
             type="button"
             onClick={() => handleSwipe(topUsers[0].id, "pass")}
-            className="flex items-center justify-center rounded-full transition-all duration-200"
+            className="flex items-center justify-center rounded-full transition-all duration-300"
             style={{
               width: 60,
               height: 60,
@@ -147,7 +216,7 @@ export function DiscoverPage() {
             }}
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLElement).style.boxShadow =
-                "0 0 25px rgba(255,80,80,0.4)";
+                "0 0 25px rgba(255,80,80,0.5)";
               (e.currentTarget as HTMLElement).style.transform = "scale(1.1)";
             }}
             onMouseLeave={(e) => {
@@ -163,7 +232,7 @@ export function DiscoverPage() {
           <button
             type="button"
             onClick={() => handleSwipe(topUsers[0].id, "like")}
-            className="flex items-center justify-center rounded-full transition-all duration-200"
+            className="flex items-center justify-center rounded-full transition-all duration-300"
             style={{
               width: 72,
               height: 72,
@@ -174,7 +243,7 @@ export function DiscoverPage() {
             }}
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLElement).style.boxShadow =
-                "0 0 35px rgba(255,45,120,0.6)";
+                "0 0 35px rgba(255,45,120,0.7)";
               (e.currentTarget as HTMLElement).style.transform = "scale(1.1)";
             }}
             onMouseLeave={(e) => {
@@ -187,6 +256,30 @@ export function DiscoverPage() {
             <Heart size={30} fill="white" />
           </button>
         </div>
+      )}
+
+      {/* Load more */}
+      {hasMoreUsers && topUsers.length > 0 && (
+        <button
+          type="button"
+          onClick={loadMoreUsers}
+          className="flex items-center gap-2 mt-6 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300"
+          style={{
+            background: "rgba(155,93,229,0.1)",
+            border: "1px solid rgba(155,93,229,0.3)",
+            color: "#9b5de5",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.boxShadow =
+              "0 0 16px rgba(155,93,229,0.3)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.boxShadow = "none";
+          }}
+        >
+          <ChevronDown size={15} />
+          Load More ({filteredUsers.length - currentPage * PAGE_SIZE} more)
+        </button>
       )}
 
       {/* Match popup */}
@@ -207,7 +300,7 @@ export function DiscoverPage() {
               }}
             />
           ))}
-          <div className="flex flex-col items-center gap-6 px-8">
+          <div className="flex flex-col items-center gap-4 px-8">
             <p className="match-popup-text">IT'S A MATCH! 💕</p>
             <p
               className="text-lg text-center font-semibold"
@@ -215,10 +308,22 @@ export function DiscoverPage() {
             >
               You and{" "}
               <span style={{ color: "#ff2d78", fontWeight: 800 }}>
-                {matchUser}
+                {matchUser.name}
               </span>{" "}
               liked each other!
             </p>
+            {matchUser.score > 0 && (
+              <div
+                className="flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-bold"
+                style={{
+                  background: "rgba(155,93,229,0.2)",
+                  border: "1px solid rgba(155,93,229,0.4)",
+                  color: "#9b5de5",
+                }}
+              >
+                ✨ {matchUser.score}% compatibility
+              </div>
+            )}
             <div
               className="flex gap-3 mt-2"
               style={{ animation: "celebrationIn 0.5s 0.3s both" }}

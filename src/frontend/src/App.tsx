@@ -1,135 +1,80 @@
-import { CursorGlow } from "@/components/dating/CursorGlow";
-import { Navbar } from "@/components/dating/Navbar";
-import { ParticleBackground } from "@/components/dating/ParticleBackground";
+import { Navbar } from "@/components/notes/Navbar";
 import { Toaster } from "@/components/ui/sonner";
-import { AppProvider, useApp } from "@/context/AppContext";
-import { AdminPage } from "@/pages/AdminPage";
-import { AuthPage } from "@/pages/AuthPage";
-import { ChatPage } from "@/pages/ChatPage";
-import { DiscoverPage } from "@/pages/DiscoverPage";
-import { MatchesPage } from "@/pages/MatchesPage";
-import { ProfilePage } from "@/pages/ProfilePage";
-import { StoriesPage } from "@/pages/StoriesPage";
-import { useState } from "react";
+import { DashboardPage } from "@/pages/DashboardPage";
+import { GeneratorPage } from "@/pages/GeneratorPage";
+import { LandingPage } from "@/pages/LandingPage";
+import { NotesAuthPage } from "@/pages/NotesAuthPage";
+import { useEffect, useState } from "react";
 
-type Page = "discover" | "matches" | "chat" | "stories" | "profile" | "admin";
-
-function InnerApp() {
-  const { isAuthenticated } = useApp();
-  const [page, setPage] = useState<Page>("discover");
-  const [chatUserId, setChatUserId] = useState<string | null>(null);
-
-  if (!isAuthenticated) {
-    return <AuthPage onSuccess={() => setPage("discover")} />;
-  }
-
-  function navigateTo(target: Page) {
-    setPage(target);
-    if (target !== "chat") setChatUserId(null);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function openChatWith(userId: string) {
-    setChatUserId(userId);
-    setPage("chat");
-  }
-
-  return (
-    <div className="dating-bg min-h-screen relative">
-      {/* Particle canvas background */}
-      <ParticleBackground />
-
-      {/* Cursor glow */}
-      <CursorGlow />
-
-      {/* Scroll progress bar */}
-      <ScrollProgress />
-
-      {/* Content */}
-      <div
-        className="relative flex flex-col min-h-screen"
-        style={{ zIndex: 10 }}
-      >
-        <Navbar currentPage={page} onNavigate={navigateTo} />
-
-        <main className="flex-1 pb-20 md:pb-6">
-          {page === "discover" && <DiscoverPage />}
-          {page === "matches" && <MatchesPage onChatWith={openChatWith} />}
-          {page === "chat" && <ChatPage initialUserId={chatUserId} />}
-          {page === "stories" && <StoriesPage />}
-          {page === "profile" && <ProfilePage />}
-          {page === "admin" && <AdminPage />}
-        </main>
-
-        <footer
-          className="py-4 text-center border-t"
-          style={{
-            borderColor: "rgba(255,45,120,0.08)",
-            color: "rgba(240,230,255,0.25)",
-            fontSize: 12,
-          }}
-        >
-          © {new Date().getFullYear()}{" "}
-          <a
-            href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(typeof window !== "undefined" ? window.location.hostname : "")}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "rgba(240,230,255,0.35)" }}
-            className="hover:underline"
-          >
-            Built with ♥ using caffeine.ai
-          </a>
-        </footer>
-      </div>
-
-      <Toaster
-        toastOptions={{
-          style: {
-            background: "rgba(10,10,15,0.95)",
-            border: "1px solid rgba(255,45,120,0.2)",
-            color: "#f0e6ff",
-          },
-        }}
-      />
-    </div>
-  );
-}
-
-function ScrollProgress() {
-  const [progress, setProgress] = useState(0);
-
-  if (typeof window !== "undefined") {
-    window.onscroll = () => {
-      const el = document.documentElement;
-      const scrollTop = el.scrollTop || document.body.scrollTop;
-      const scrollHeight = el.scrollHeight - el.clientHeight;
-      if (scrollHeight > 0) {
-        setProgress((scrollTop / scrollHeight) * 100);
-      }
-    };
-  }
-
-  return (
-    <div
-      className="fixed top-0 left-0 right-0 z-[100]"
-      style={{ height: 2, background: "rgba(255,45,120,0.1)" }}
-    >
-      <div
-        style={{
-          height: "100%",
-          width: `${progress}%`,
-          background: "linear-gradient(90deg, #ff2d78, #9b5de5, #00f5d4)",
-          transition: "width 0.1s ease",
-        }}
-      />
-    </div>
-  );
+// ── Simple hash-based router ──────────────────────────────────────────────────
+function getHashRoute() {
+  const raw = window.location.hash.slice(1) || "/";
+  const idx = raw.indexOf("?");
+  return {
+    path: idx === -1 ? raw : raw.slice(0, idx),
+    search: idx === -1 ? "" : raw.slice(idx),
+  };
 }
 
 export default function App() {
+  const [route, setRoute] = useState(getHashRoute);
+  const [lowResource, setLowResource] = useState(
+    () => localStorage.getItem("ajito_low_resource") === "1",
+  );
+
+  useEffect(() => {
+    const handler = () => setRoute(getHashRoute());
+    window.addEventListener("hashchange", handler);
+    return () => window.removeEventListener("hashchange", handler);
+  }, []);
+
+  useEffect(() => {
+    if (lowResource) {
+      document.body.classList.add("low-resource");
+    } else {
+      document.body.classList.remove("low-resource");
+    }
+    localStorage.setItem("ajito_low_resource", lowResource ? "1" : "0");
+  }, [lowResource]);
+
+  const navigate = (path: string) => {
+    window.location.hash = path;
+  };
+
+  const searchParams = new URLSearchParams(route.search);
+  const topic = searchParams.get("topic") || "";
+
+  const renderPage = () => {
+    switch (route.path) {
+      case "/generate":
+        return <GeneratorPage topic={topic} onNavigate={navigate} />;
+      case "/dashboard":
+        return <DashboardPage onNavigate={navigate} />;
+      case "/auth":
+        return <NotesAuthPage onNavigate={navigate} />;
+      default:
+        return <LandingPage onNavigate={navigate} />;
+    }
+  };
+
   return (
-    <AppProvider>
-      <InnerApp />
-    </AppProvider>
+    <>
+      <Navbar
+        lowResource={lowResource}
+        onToggleLowResource={() => setLowResource((p) => !p)}
+        onNavigate={navigate}
+        currentPath={route.path}
+      />
+      {renderPage()}
+      <Toaster
+        toastOptions={{
+          style: {
+            background: "oklch(0.09 0 0 / 0.95)",
+            border: "1px solid oklch(0.77 0.19 195 / 0.2)",
+            color: "oklch(0.93 0.015 210)",
+          },
+        }}
+      />
+    </>
   );
 }

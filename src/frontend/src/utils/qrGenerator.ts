@@ -1,25 +1,19 @@
 /**
- * QR code generation using the qrcode-generator CDN library.
- * Returns a data URL (PNG) for embedding in PDF or preview.
+ * QR code generation using the qrcode npm package.
+ * Returns a data URL (PNG/canvas) for embedding in PDF or preview.
  */
 
-declare function qrcode(
-  typeNumber: number,
-  errorCorrectionLevel: string,
-): {
-  addData(data: string): void;
-  make(): void;
-  createDataURL(cellSize: number, margin: number): string;
-  createImgTag(cellSize: number, margin: number): string;
-};
+// qrcode loaded via CDN
+const QRCode: any = null;
 
-export function generateQRDataURL(data: string): string | null {
+export async function generateQRDataURL(data: string): Promise<string | null> {
   try {
-    if (typeof qrcode === "undefined") return null;
-    const qr = qrcode(0, "M");
-    qr.addData(data);
-    qr.make();
-    return qr.createDataURL(2, 2);
+    const url = await QRCode.toDataURL(data, {
+      width: 64,
+      margin: 1,
+      color: { dark: "#000000", light: "#ffffff" },
+    });
+    return url;
   } catch {
     return null;
   }

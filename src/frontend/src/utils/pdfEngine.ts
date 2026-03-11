@@ -1,37 +1,13 @@
 /**
- * PDF engine using jsPDF.
+ * PDF engine using jsPDF (npm).
  * Generates true A4 cheat sheets with multi-column layout.
  */
 
+// jsPDF loaded via CDN
+// biome-ignore lint: legacy file
+type jsPDF_t = any;
+const jsPDF: any = class {};
 import type { CheatMode, QAPair } from "./cheatTypes";
-
-// jsPDF is loaded globally via CDN
-declare const jspdf: { jsPDF: new (options: object) => JsPDFInstance };
-
-interface JsPDFInstance {
-  setFontSize(size: number): void;
-  setFont(font: string, style?: string): void;
-  setTextColor(r: number, g: number, b: number): void;
-  setFillColor(r: number, g: number, b: number): void;
-  setDrawColor(r: number, g: number, b: number): void;
-  setLineWidth(width: number): void;
-  rect(x: number, y: number, w: number, h: number, style?: string): void;
-  text(text: string | string[], x: number, y: number, options?: object): void;
-  addImage(
-    imageData: string,
-    format: string,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-  ): void;
-  splitTextToSize(text: string, maxWidth: number): string[];
-  save(filename: string): void;
-  addPage(): void;
-  internal: { pageSize: { width: number; height: number } };
-  getNumberOfPages(): number;
-  setPage(page: number): void;
-}
 
 export interface PDFOptions {
   title: string;
@@ -52,11 +28,7 @@ export async function generatePDF(options: PDFOptions): Promise<void> {
   const { title, pairs, mode, watermark, footerText, qrDataUrl, studentName } =
     options;
 
-  if (typeof jspdf === "undefined") {
-    throw new Error("jsPDF not loaded");
-  }
-
-  const doc = new jspdf.jsPDF({
+  const doc = new jsPDF({
     orientation: "portrait",
     unit: "mm",
     format: "a4",

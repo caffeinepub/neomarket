@@ -1,4 +1,5 @@
 import { useApp } from "@/context/AppContext";
+import type { Lifestyle } from "@/data/mockUsers";
 import { Eye, EyeOff, Heart } from "lucide-react";
 import { type FormEvent, useState } from "react";
 
@@ -18,6 +19,13 @@ function getPasswordStrength(pw: string): {
   return { level: 3, label: "Strong", color: "#00f5d4" };
 }
 
+const LIFESTYLE_OPTIONS: { value: Lifestyle; label: string }[] = [
+  { value: "active", label: "🏃 Active" },
+  { value: "homebody", label: "🏠 Homebody" },
+  { value: "adventurer", label: "🌏 Adventurer" },
+  { value: "creative", label: "🎨 Creative" },
+];
+
 export function AuthPage({ onSuccess }: Props) {
   const { login, signup } = useApp();
   const [tab, setTab] = useState<"login" | "signup">("login");
@@ -32,6 +40,13 @@ export function AuthPage({ onSuccess }: Props) {
   const [signupName, setSignupName] = useState("");
   const [signupAge, setSignupAge] = useState("");
   const [signupLocation, setSignupLocation] = useState("");
+  const [signupGender, setSignupGender] = useState<
+    "male" | "female" | "nonbinary"
+  >("nonbinary");
+  const [signupLifestyle, setSignupLifestyle] = useState<Lifestyle>("active");
+  const [signupHobbies, setSignupHobbies] = useState("");
+  const [signupInterests, setSignupInterests] = useState("");
+  const [signupBio, setSignupBio] = useState("");
   const [signupPw, setSignupPw] = useState("");
 
   const pwStrength = getPasswordStrength(tab === "signup" ? signupPw : loginPw);
@@ -45,7 +60,7 @@ export function AuthPage({ onSuccess }: Props) {
     }
     const ok = login(loginName.trim(), loginPw);
     if (ok) onSuccess();
-    else setError("Invalid credentials.");
+    else setError("Invalid username or password.");
   }
 
   function handleSignup(e: FormEvent) {
@@ -59,23 +74,35 @@ export function AuthPage({ onSuccess }: Props) {
       setError("Password must be at least 6 characters.");
       return;
     }
-    signup({
+    const ok = signup({
       name: signupName.trim(),
       age: Number.parseInt(signupAge) || 25,
       location: signupLocation.trim() || "Earth",
+      gender: signupGender,
+      lifestyle: signupLifestyle,
+      hobbies: signupHobbies
+        .split(",")
+        .map((h) => h.trim())
+        .filter(Boolean),
+      interests: signupInterests
+        .split(",")
+        .map((i) => i.trim())
+        .filter(Boolean),
+      bio: signupBio.trim(),
       password: signupPw,
     });
-    onSuccess();
+    if (ok) onSuccess();
+    else setError("Failed to create account. Please try again.");
   }
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center relative overflow-hidden"
+      className="min-h-screen flex items-center justify-center relative overflow-hidden py-8"
       style={{ background: "#0a0a0f" }}
     >
       {/* Animated gradient blobs */}
       <div
-        className="absolute"
+        className="absolute pointer-events-none"
         style={{
           width: 600,
           height: 600,
@@ -88,7 +115,7 @@ export function AuthPage({ onSuccess }: Props) {
         }}
       />
       <div
-        className="absolute"
+        className="absolute pointer-events-none"
         style={{
           width: 500,
           height: 500,
@@ -200,7 +227,7 @@ export function AuthPage({ onSuccess }: Props) {
                 id="login-username"
                 type="text"
                 className="dating-input"
-                placeholder="Your name or 'admin'"
+                placeholder="Your registered name"
                 value={loginName}
                 onChange={(e) => setLoginName(e.target.value)}
                 autoComplete="username"
@@ -235,13 +262,6 @@ export function AuthPage({ onSuccess }: Props) {
               </button>
             </div>
 
-            {/* Admin tip */}
-            <p style={{ color: "rgba(240,230,255,0.3)", fontSize: 11 }}>
-              Tip: username <span style={{ color: "#00f5d4" }}>admin</span> /
-              password <span style={{ color: "#00f5d4" }}>admin123</span> for
-              admin panel
-            </p>
-
             {error && (
               <p role="alert" style={{ color: "#ff4444", fontSize: 13 }}>
                 {error}
@@ -255,12 +275,26 @@ export function AuthPage({ onSuccess }: Props) {
             >
               Login to NeoDate
             </button>
+
+            <p
+              className="text-center text-xs cursor-pointer"
+              style={{ color: "rgba(240,230,255,0.4)" }}
+            >
+              New here?{" "}
+              <button
+                type="button"
+                onClick={() => setTab("signup")}
+                style={{ color: "#ff2d78", fontWeight: 600 }}
+              >
+                Create account
+              </button>
+            </p>
           </form>
         )}
 
         {/* Signup form */}
         {tab === "signup" && (
-          <form onSubmit={handleSignup} className="flex flex-col gap-4">
+          <form onSubmit={handleSignup} className="flex flex-col gap-3">
             <div>
               <label
                 htmlFor="signup-name"
@@ -301,21 +335,136 @@ export function AuthPage({ onSuccess }: Props) {
               </div>
               <div className="flex-1">
                 <label
-                  htmlFor="signup-location"
+                  htmlFor="signup-gender"
                   className="block text-xs font-semibold mb-1.5"
                   style={{ color: "rgba(240,230,255,0.5)" }}
                 >
-                  LOCATION
+                  GENDER
                 </label>
-                <input
-                  id="signup-location"
-                  type="text"
+                <select
+                  id="signup-gender"
                   className="dating-input"
-                  placeholder="City, Country"
-                  value={signupLocation}
-                  onChange={(e) => setSignupLocation(e.target.value)}
-                />
+                  value={signupGender}
+                  onChange={(e) =>
+                    setSignupGender(
+                      e.target.value as "male" | "female" | "nonbinary",
+                    )
+                  }
+                  style={{ fontSize: 14 }}
+                >
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="nonbinary">Non-binary</option>
+                </select>
               </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="signup-location"
+                className="block text-xs font-semibold mb-1.5"
+                style={{ color: "rgba(240,230,255,0.5)" }}
+              >
+                LOCATION
+              </label>
+              <input
+                id="signup-location"
+                type="text"
+                className="dating-input"
+                placeholder="City, Country"
+                value={signupLocation}
+                onChange={(e) => setSignupLocation(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <p
+                className="block text-xs font-semibold mb-1.5"
+                style={{ color: "rgba(240,230,255,0.5)" }}
+              >
+                LIFESTYLE
+              </p>
+              <div className="flex gap-1.5 flex-wrap">
+                {LIFESTYLE_OPTIONS.map((l) => (
+                  <button
+                    key={l.value}
+                    type="button"
+                    onClick={() => setSignupLifestyle(l.value)}
+                    className="px-2.5 py-1 rounded-xl text-xs font-semibold transition-all duration-200"
+                    style={{
+                      background:
+                        signupLifestyle === l.value
+                          ? "rgba(255,45,120,0.2)"
+                          : "rgba(255,255,255,0.04)",
+                      border:
+                        signupLifestyle === l.value
+                          ? "1px solid rgba(255,45,120,0.5)"
+                          : "1px solid rgba(255,255,255,0.1)",
+                      color:
+                        signupLifestyle === l.value
+                          ? "#ff2d78"
+                          : "rgba(240,230,255,0.4)",
+                    }}
+                  >
+                    {l.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="signup-hobbies"
+                className="block text-xs font-semibold mb-1.5"
+                style={{ color: "rgba(240,230,255,0.5)" }}
+              >
+                HOBBIES (comma separated)
+              </label>
+              <input
+                id="signup-hobbies"
+                type="text"
+                className="dating-input"
+                placeholder="Photography, Hiking, Cooking"
+                value={signupHobbies}
+                onChange={(e) => setSignupHobbies(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="signup-interests"
+                className="block text-xs font-semibold mb-1.5"
+                style={{ color: "rgba(240,230,255,0.5)" }}
+              >
+                INTERESTS (comma separated)
+              </label>
+              <input
+                id="signup-interests"
+                type="text"
+                className="dating-input"
+                placeholder="Travel, Music, Technology"
+                value={signupInterests}
+                onChange={(e) => setSignupInterests(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="signup-bio"
+                className="block text-xs font-semibold mb-1.5"
+                style={{ color: "rgba(240,230,255,0.5)" }}
+              >
+                BIO
+              </label>
+              <textarea
+                id="signup-bio"
+                className="dating-input resize-none"
+                placeholder="Tell people about yourself..."
+                value={signupBio}
+                onChange={(e) => setSignupBio(e.target.value)}
+                rows={2}
+                style={{ lineHeight: 1.5 }}
+              />
             </div>
 
             <div className="relative">
@@ -330,7 +479,7 @@ export function AuthPage({ onSuccess }: Props) {
                 id="signup-password"
                 type={showPw ? "text" : "password"}
                 className="dating-input pr-10"
-                placeholder="Create a password"
+                placeholder="Create a password (min 6 chars)"
                 value={signupPw}
                 onChange={(e) => setSignupPw(e.target.value)}
                 autoComplete="new-password"
@@ -387,6 +536,20 @@ export function AuthPage({ onSuccess }: Props) {
             >
               Create Account
             </button>
+
+            <p
+              className="text-center text-xs"
+              style={{ color: "rgba(240,230,255,0.4)" }}
+            >
+              Already have an account?{" "}
+              <button
+                type="button"
+                onClick={() => setTab("login")}
+                style={{ color: "#ff2d78", fontWeight: 600 }}
+              >
+                Login
+              </button>
+            </p>
           </form>
         )}
       </div>

@@ -1,5 +1,5 @@
 import { Moon, Sun, ZoomIn, ZoomOut } from "lucide-react";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CheatMode, QAPair } from "../../utils/cheatTypes";
 import { generateQRContent, generateQRDataURL } from "../../utils/qrGenerator";
 
@@ -40,12 +40,26 @@ export function A4Preview({
   shuffle,
 }: A4PreviewProps) {
   const a4Ref = useRef<HTMLDivElement>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
-  const qrDataUrl = useMemo(() => {
+  const qrContent = useMemo(() => {
     if (!studentName?.trim()) return null;
-    const content = generateQRContent(studentName);
-    return generateQRDataURL(content);
+    return generateQRContent(studentName);
   }, [studentName]);
+
+  useEffect(() => {
+    if (!qrContent) {
+      setQrDataUrl(null);
+      return;
+    }
+    let cancelled = false;
+    generateQRDataURL(qrContent).then((url) => {
+      if (!cancelled) setQrDataUrl(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [qrContent]);
 
   const activePairs = useMemo(() => {
     const filtered = pairs.filter((p) => p.question.trim() || p.answer.trim());

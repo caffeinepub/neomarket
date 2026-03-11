@@ -1,5 +1,5 @@
 import { useApp } from "@/context/AppContext";
-import { MOCK_USERS } from "@/data/mockUsers";
+import { formatLastActive } from "@/context/AppContext";
 import {
   Ban,
   CheckCircle,
@@ -77,6 +77,8 @@ export function AdminPage() {
     bannedUserIds,
     matches,
     onlineCount,
+    users,
+    messages,
   } = useApp();
   const [search, setSearch] = useState("");
 
@@ -97,7 +99,12 @@ export function AdminPage() {
     );
   }
 
-  const filtered = MOCK_USERS.filter(
+  // Active chats = matches that have messages
+  const activeChats = matches.filter(
+    (m) => (messages[m.id] ?? []).length > 0,
+  ).length;
+
+  const filtered = users.filter(
     (u) =>
       u.name.toLowerCase().includes(search.toLowerCase()) ||
       u.location.toLowerCase().includes(search.toLowerCase()),
@@ -137,19 +144,19 @@ export function AdminPage() {
         <StatCard
           icon={<Users size={22} />}
           label="Total Users"
-          value={MOCK_USERS.length}
+          value={users.length}
           color="#ff2d78"
         />
         <StatCard
           icon={<Heart size={22} />}
           label="Total Matches"
-          value={matches.length + 47}
+          value={matches.length}
           color="#9b5de5"
         />
         <StatCard
           icon={<MessageCircle size={22} />}
           label="Active Chats"
-          value={23}
+          value={activeChats}
           color="#00f5d4"
         />
         <StatCard
@@ -173,7 +180,7 @@ export function AdminPage() {
             className="font-bold text-base"
             style={{ color: "var(--text-primary)" }}
           >
-            All Users
+            All Users ({users.length})
           </h3>
           <input
             type="text"
@@ -189,7 +196,7 @@ export function AdminPage() {
         <div
           className="hidden md:grid px-6 py-3 text-xs font-bold"
           style={{
-            gridTemplateColumns: "auto 1fr 1fr auto auto",
+            gridTemplateColumns: "auto 1fr 1fr auto auto auto",
             color: "rgba(240,230,255,0.35)",
             letterSpacing: "0.08em",
             borderBottom: "1px solid rgba(255,255,255,0.05)",
@@ -198,138 +205,172 @@ export function AdminPage() {
           <span className="w-10" />
           <span>NAME</span>
           <span>LOCATION</span>
+          <span>LAST ACTIVE</span>
           <span>STATUS</span>
           <span>ACTION</span>
         </div>
 
-        <div
-          className="divide-y"
-          style={{ borderColor: "rgba(255,255,255,0.04)" }}
-        >
-          {filtered.map((user) => {
-            const isBanned = bannedUserIds.includes(user.id);
-            return (
-              <div
-                key={user.id}
-                className="flex md:grid items-center gap-4 px-6 py-4"
-                style={{
-                  gridTemplateColumns: "auto 1fr 1fr auto auto",
-                  background: isBanned ? "rgba(255,50,50,0.04)" : "transparent",
-                }}
-              >
-                {/* Avatar */}
-                <img
-                  src={user.avatarUrl}
-                  alt={user.name}
-                  loading="lazy"
-                  className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+        {filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-3">
+            <Users size={32} style={{ color: "rgba(255,255,255,0.15)" }} />
+            <p style={{ color: "rgba(240,230,255,0.3)", fontSize: 14 }}>
+              {search
+                ? "No users match your search"
+                : "No registered users yet"}
+            </p>
+          </div>
+        ) : (
+          <div
+            className="divide-y"
+            style={{ borderColor: "rgba(255,255,255,0.04)" }}
+          >
+            {filtered.map((user) => {
+              const isBanned = bannedUserIds.includes(user.id);
+              const lastActiveStr = user.lastActive
+                ? formatLastActive(user.lastActive)
+                : "Unknown";
+              return (
+                <div
+                  key={user.id}
+                  className="flex md:grid items-center gap-4 px-6 py-4"
                   style={{
-                    border: "1.5px solid rgba(255,45,120,0.25)",
-                    opacity: isBanned ? 0.5 : 1,
-                    filter: isBanned ? "grayscale(1)" : "none",
+                    gridTemplateColumns: "auto 1fr 1fr auto auto auto",
+                    background: isBanned
+                      ? "rgba(255,50,50,0.04)"
+                      : "transparent",
                   }}
-                />
-
-                {/* Name */}
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="font-semibold text-sm"
-                      style={{
-                        color: isBanned
-                          ? "rgba(240,230,255,0.3)"
-                          : "var(--text-primary)",
-                        textDecoration: isBanned ? "line-through" : "none",
-                      }}
-                    >
-                      {user.name}, {user.age}
-                    </span>
-                    {isBanned && (
-                      <span
-                        className="px-2 py-0.5 rounded-full text-[9px] font-black"
-                        style={{
-                          background: "rgba(255,50,50,0.2)",
-                          border: "1px solid rgba(255,50,50,0.4)",
-                          color: "#ff5050",
-                        }}
-                      >
-                        BANNED
-                      </span>
-                    )}
-                    {user.isVerified && !isBanned && (
-                      <CheckCircle size={12} style={{ color: "#00f5d4" }} />
-                    )}
-                  </div>
-                  <p style={{ color: "rgba(240,230,255,0.3)", fontSize: 11 }}>
-                    {user.lifestyle}
-                  </p>
-                </div>
-
-                {/* Location */}
-                <span
-                  className="hidden md:block text-sm"
-                  style={{ color: "rgba(240,230,255,0.45)" }}
                 >
-                  {user.location}
-                </span>
-
-                {/* Online status */}
-                <div className="hidden md:flex items-center gap-1.5">
-                  <span
-                    className="rounded-full"
+                  {/* Avatar */}
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.name}
+                    loading="lazy"
+                    className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                     style={{
-                      width: 7,
-                      height: 7,
-                      background:
-                        user.isOnline && !isBanned
-                          ? "#00f5d4"
-                          : "rgba(255,255,255,0.2)",
-                      boxShadow:
-                        user.isOnline && !isBanned
-                          ? "0 0 6px rgba(0,245,212,0.6)"
-                          : "none",
+                      border: "1.5px solid rgba(255,45,120,0.25)",
+                      opacity: isBanned ? 0.5 : 1,
+                      filter: isBanned ? "grayscale(1)" : "none",
                     }}
                   />
-                  <span
-                    style={{ color: "rgba(240,230,255,0.4)", fontSize: 11 }}
-                  >
-                    {isBanned ? "Banned" : user.isOnline ? "Online" : "Offline"}
-                  </span>
-                </div>
 
-                {/* Ban/unban */}
-                <button
-                  type="button"
-                  onClick={() =>
-                    isBanned ? unbanUser(user.id) : banUser(user.id)
-                  }
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 flex-shrink-0"
-                  style={{
-                    background: isBanned
-                      ? "rgba(0,245,212,0.1)"
-                      : "rgba(255,50,50,0.1)",
-                    border: isBanned
-                      ? "1px solid rgba(0,245,212,0.3)"
-                      : "1px solid rgba(255,50,50,0.3)",
-                    color: isBanned ? "#00f5d4" : "#ff5050",
-                  }}
-                >
-                  {isBanned ? (
-                    <>
-                      <CheckCircle size={12} />
-                      <span className="hidden sm:inline">Unban</span>
-                    </>
-                  ) : (
-                    <>
-                      <Ban size={12} />
-                      <span className="hidden sm:inline">Ban</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            );
-          })}
-        </div>
+                  {/* Name */}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="font-semibold text-sm"
+                        style={{
+                          color: isBanned
+                            ? "rgba(240,230,255,0.3)"
+                            : "var(--text-primary)",
+                          textDecoration: isBanned ? "line-through" : "none",
+                        }}
+                      >
+                        {user.name}, {user.age}
+                      </span>
+                      {isBanned && (
+                        <span
+                          className="px-2 py-0.5 rounded-full text-[9px] font-black"
+                          style={{
+                            background: "rgba(255,50,50,0.2)",
+                            border: "1px solid rgba(255,50,50,0.4)",
+                            color: "#ff5050",
+                          }}
+                        >
+                          BANNED
+                        </span>
+                      )}
+                      {user.isVerified && !isBanned && (
+                        <CheckCircle size={12} style={{ color: "#00f5d4" }} />
+                      )}
+                    </div>
+                    <p style={{ color: "rgba(240,230,255,0.3)", fontSize: 11 }}>
+                      {user.lifestyle}
+                    </p>
+                  </div>
+
+                  {/* Location */}
+                  <span
+                    className="hidden md:block text-sm"
+                    style={{ color: "rgba(240,230,255,0.45)" }}
+                  >
+                    {user.location}
+                  </span>
+
+                  {/* Last active */}
+                  <span
+                    className="hidden md:block text-xs"
+                    style={{
+                      color:
+                        lastActiveStr === "Online"
+                          ? "#00f5d4"
+                          : "rgba(240,230,255,0.35)",
+                    }}
+                  >
+                    {lastActiveStr}
+                  </span>
+
+                  {/* Online status */}
+                  <div className="hidden md:flex items-center gap-1.5">
+                    <span
+                      className="rounded-full"
+                      style={{
+                        width: 7,
+                        height: 7,
+                        background:
+                          user.isOnline && !isBanned
+                            ? "#00f5d4"
+                            : "rgba(255,255,255,0.2)",
+                        boxShadow:
+                          user.isOnline && !isBanned
+                            ? "0 0 6px rgba(0,245,212,0.6)"
+                            : "none",
+                      }}
+                    />
+                    <span
+                      style={{ color: "rgba(240,230,255,0.4)", fontSize: 11 }}
+                    >
+                      {isBanned
+                        ? "Banned"
+                        : user.isOnline
+                          ? "Online"
+                          : "Offline"}
+                    </span>
+                  </div>
+
+                  {/* Ban/unban */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      isBanned ? unbanUser(user.id) : banUser(user.id)
+                    }
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 flex-shrink-0"
+                    style={{
+                      background: isBanned
+                        ? "rgba(0,245,212,0.1)"
+                        : "rgba(255,50,50,0.1)",
+                      border: isBanned
+                        ? "1px solid rgba(0,245,212,0.3)"
+                        : "1px solid rgba(255,50,50,0.3)",
+                      color: isBanned ? "#00f5d4" : "#ff5050",
+                    }}
+                  >
+                    {isBanned ? (
+                      <>
+                        <CheckCircle size={12} />
+                        <span className="hidden sm:inline">Unban</span>
+                      </>
+                    ) : (
+                      <>
+                        <Ban size={12} />
+                        <span className="hidden sm:inline">Ban</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
